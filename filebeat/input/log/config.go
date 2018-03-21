@@ -85,7 +85,8 @@ type config struct {
 	JSON         *reader.JSONConfig      `config:"json"`
 
 	// Hidden on purpose, used by the docker input:
-	DockerJSON string `config:"docker-json"`
+	DockerJSONStream        string `config:"docker-json-stream"`
+	DockerJSONConcatPartial bool   `config:"docker-json-concat-partial"`
 }
 
 type LogConfig struct {

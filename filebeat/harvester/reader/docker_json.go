@@ -16,6 +16,8 @@ type DockerJSON struct {
 	reader Reader
 	// stream filter, `all`, `stderr` or `stdout`
 	stream string
+	// option for concat partial docker logs
+	concatPartial bool
 }
 
 type dockerLog struct {
@@ -31,24 +33,25 @@ type crioLog struct {
 }
 
 // NewDockerJSON creates a new reader renaming a field
-func NewDockerJSON(r Reader, stream string) *DockerJSON {
+func NewDockerJSON(r Reader, stream string, concatPartial bool) *DockerJSON {
 	return &DockerJSON{
-		stream: stream,
-		reader: r,
+		stream:        stream,
+		reader:        r,
+		concatPartial: concatPartial,
 	}
 }
 
 // parseCRILog parses logs in CRI log format.
 // CRI log format example :
 // 2017-09-12T22:32:21.212861448Z stdout 2017-09-12 22:32:21.212 [INFO][88] table.go 710: Invalidating dataplane cache
-func parseCRILog(message Message, msg *crioLog) (Message, error) {
+func parseCRILog(message Message, msg *crioLog) (Message, bool, error) {
 	log := strings.SplitN(string(message.Content), " ", 3)
 	if len(log) < 3 {
-		return message, errors.New("invalid CRI log")
+		return message, false, errors.New("invalid CRI log")
 	}
 	ts, err := time.Parse(time.RFC3339, log[0])
 	if err != nil {
-		return message, errors.Wrap(err, "parsing CRI timestamp")
+		return message, false, errors.Wrap(err, "parsing CRI timestamp")
 	}
 
 	msg.Timestamp = ts
@@ -60,22 +63,22 @@ func parseCRILog(message Message, msg *crioLog) (Message, error) {
 	message.Content = msg.Log
 	message.Ts = ts
 
-	return message, nil
+	return message, false, nil
 }
 
 // parseDockerJSONLog parses logs in Docker JSON log format.
 // Docker JSON log format example:
 // {"log":"1:M 09 Nov 13:27:36.276 # User requested shutdown...\n","stream":"stdout"}
-func parseDockerJSONLog(message Message, msg *dockerLog) (Message, error) {
+func parseDockerJSONLog(message Message, msg *dockerLog) (Message, bool, error) {
 	dec := json.NewDecoder(bytes.NewReader(message.Content))
 	if err := dec.Decode(&msg); err != nil {
-		return message, errors.Wrap(err, "decoding docker JSON")
+		return message, false, errors.Wrap(err, "decoding docker JSON")
 	}
 
 	// Parse timestamp
 	ts, err := time.Parse(time.RFC3339, msg.Timestamp)
 	if err != nil {
-		return message, errors.Wrap(err, "parsing docker timestamp")
+		return message, false, errors.Wrap(err, "parsing docker timestamp")
 	}
 
 	message.AddFields(common.MapStr{
@@ -84,11 +87,13 @@ func parseDockerJSONLog(message Message, msg *dockerLog) (Message, error) {
 	message.Content = []byte(msg.Log)
 	message.Ts = ts
 
-	return message, nil
+	isPartial := msg.Log[len(msg.Log)-1] != '\n'
+	return message, isPartial, nil
 }
 
 // Next returns the next line.
 func (p *DockerJSON) Next() (Message, error) {
+	partialContent := []byte{}
 	for {
 		message, err := p.reader.Next()
 		if err != nil {
@@ -97,17 +102,27 @@ func (p *DockerJSON) Next() (Message, error) {
 
 		var dockerLine dockerLog
 		var crioLine crioLog
+		var isPartial bool
 
 		if strings.HasPrefix(string(message.Content), "{") {
-			message, err = parseDockerJSONLog(message, &dockerLine)
+			message, isPartial, err = parseDockerJSONLog(message, &dockerLine)
 		} else {
-			message, err = parseCRILog(message, &crioLine)
+			// isPartial will always return true. for now, support only json partial logs
+			message, isPartial, err = parseCRILog(message, &crioLine)
 		}
 
 		if p.stream != "all" && p.stream != dockerLine.Stream && p.stream != crioLine.Stream {
 			continue
 		}
 
+		if p.concatPartial {
+			if isPartial {
+				partialContent = append(partialContent, message.Content...)
+				continue
+			} else if len(partialContent) > 0 {
+				message.Content = append(partialContent, message.Content...)
+			}
+		}
 		return message, err
 	}
 }
