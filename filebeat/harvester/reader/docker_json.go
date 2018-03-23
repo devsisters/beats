@@ -87,7 +87,7 @@ func parseDockerJSONLog(message Message, msg *dockerLog) (Message, bool, error) 
 	message.Content = []byte(msg.Log)
 	message.Ts = ts
 
-	isPartial := msg.Log[len(msg.Log)-1] != '\n'
+	isPartial := len(msg.Log) > 2 && (msg.Log[len(msg.Log)-1] != '\n' || msg.Log[len(msg.Log)-2] == '\\')
 	return message, isPartial, nil
 }
 

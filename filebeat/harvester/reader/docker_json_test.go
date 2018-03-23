@@ -60,7 +60,7 @@ func TestDockerJSON(t *testing.T) {
 				Ts:      time.Date(2017, 9, 12, 22, 32, 21, 212861448, time.UTC),
 			},
 		},
-		// JSON partial logs
+		// JSON partial log
 		{
 			input: [][]byte{
 				[]byte(`{"log":"1:M 09 Nov 13:27:36.276 # User requested ","stream":"stdout","time":"2017-11-09T13:27:36.277747246Z"}`),
@@ -70,6 +70,20 @@ func TestDockerJSON(t *testing.T) {
 			stream: "all",
 			expectedMessage: Message{
 				Content: []byte("1:M 09 Nov 13:27:36.276 # User requested shutdown...\n"),
+				Fields:  common.MapStr{"stream": "stdout"},
+				Ts:      time.Date(2017, 11, 9, 13, 27, 36, 277747246, time.UTC),
+			},
+		},
+		// JSON partial log which contains end with '\\n'
+		{
+			input: [][]byte{
+				[]byte(`{"log":"1:M 09 Nov 13:27:36.276 # User requested ","stream":"stdout","time":"2017-11-09T13:27:36.277747246Z"}`),
+				[]byte(`{"log":"shutdown\\n","stream":"stdout","time":"2017-11-09T13:27:36.277747246Z"}`),
+				[]byte(`{"log":"...\n","stream":"stdout","time":"2017-11-09T13:27:36.277747246Z"}`),
+			},
+			stream: "all",
+			expectedMessage: Message{
+				Content: []byte("1:M 09 Nov 13:27:36.276 # User requested shutdown\\n...\n"),
 				Fields:  common.MapStr{"stream": "stdout"},
 				Ts:      time.Date(2017, 11, 9, 13, 27, 36, 277747246, time.UTC),
 			},
