@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/elastic/beats/libbeat/common"
+	"github.com/elastic/beats/libbeat/logp"
 
 	"github.com/pkg/errors"
 )
@@ -47,10 +48,12 @@ func NewDockerJSON(r Reader, stream string, concatPartial bool) *DockerJSON {
 func parseCRILog(message Message, msg *crioLog) (Message, bool, error) {
 	log := strings.SplitN(string(message.Content), " ", 3)
 	if len(log) < 3 {
+		logp.Err("invalid CRI: %s", message.Content)
 		return message, false, errors.New("invalid CRI log")
 	}
 	ts, err := time.Parse(time.RFC3339, log[0])
 	if err != nil {
+		logp.Err("invalid CRI: %s", message.Content)
 		return message, false, errors.Wrap(err, "parsing CRI timestamp")
 	}
 
