@@ -94,6 +94,7 @@ func parseDockerJSONLog(message Message, msg *dockerLog) (Message, bool, error) 
 // Next returns the next line.
 func (p *DockerJSON) Next() (Message, error) {
 	partialContent := []byte{}
+	partialReadBytes := 0
 	for {
 		message, err := p.reader.Next()
 		if err != nil {
@@ -118,9 +119,11 @@ func (p *DockerJSON) Next() (Message, error) {
 		if p.concatPartial {
 			if isPartial {
 				partialContent = append(partialContent, message.Content...)
+				partialReadBytes += message.Bytes
 				continue
 			} else if len(partialContent) > 0 {
 				message.Content = append(partialContent, message.Content...)
+				message.Bytes += partialReadBytes
 			}
 		}
 		return message, err
