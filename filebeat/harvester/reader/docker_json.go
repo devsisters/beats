@@ -101,6 +101,10 @@ func (p *DockerJSON) Next() (Message, error) {
 	for {
 		message, err := p.reader.Next()
 		if err != nil {
+			logp.Err("message p.reader.Next() error: err=%s message=%v", err.Error(), message)
+			if partialReadBytes > 0 {
+				logp.Err("already read parital message: bytes=%d contents=%s", partialReadBytes, string(partialContent))
+			}
 			return message, err
 		}
 
@@ -117,6 +121,16 @@ func (p *DockerJSON) Next() (Message, error) {
 
 		if p.stream != "all" && p.stream != dockerLine.Stream && p.stream != crioLine.Stream {
 			continue
+		}
+
+		if err != nil {
+			logp.Err("message after read error: err=%s bytes=%d, content=%s", err.Error(), message.Bytes, string(message.Content))
+			if isPartial {
+				logp.Err("message after read isPartial: true")
+			}
+			if len(partialContent) > 0 {
+				logp.Err("already read parital message: bytes=%d contents=%s", partialReadBytes, string(partialContent))
+			}
 		}
 
 		if p.concatPartial {
