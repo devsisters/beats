@@ -126,6 +126,7 @@ func (p *Reader) Next() (reader.Message, error) {
 				return message, err
 			}
 			// Handle multiline messages, join lines that don't end with \n
+			partialBytes := 0
 			for p.partial && message.Content[len(message.Content)-1] != byte('\n') {
 				next, err := p.reader.Next()
 				if err != nil {
@@ -136,7 +137,9 @@ func (p *Reader) Next() (reader.Message, error) {
 					return message, err
 				}
 				message.Content = append(message.Content, next.Content...)
+				partialBytes += next.Bytes
 			}
+			message.Bytes += partialBytes
 		} else {
 			message, err = parseCRILog(message, &crioLine)
 		}
