@@ -71,7 +71,7 @@ func (c *SaslConfig) ConfigureSarama(config *sarama.Config) {
 		config.Net.SASL.TokenProvider = &AWSIAMTokenProvider{region: c.AWSRegion}
 	default:
 		// This should never happen because `SaslMechanism` is checked on `Validate()`, keeping a panic to detect it earlier if it happens.
-		panic(fmt.Sprintf("not valid SASL mechanism '%v', only supported with PLAIN|SCRAM-SHA-512|SCRAM-SHA-256", c.SaslMechanism))
+		panic(fmt.Sprintf("not valid SASL mechanism '%v', only supported with PLAIN|SCRAM-SHA-512|SCRAM-SHA-256|AWS-IAM", c.SaslMechanism))
 	}
 }
 
@@ -79,7 +79,7 @@ func (c *SaslConfig) Validate() error {
 	switch strings.ToUpper(c.SaslMechanism) { // try not to force users to use all upper case
 	case "", saslTypePlaintext, saslTypeSCRAMSHA256, saslTypeSCRAMSHA512:
 	default:
-		return fmt.Errorf("not valid SASL mechanism '%v', only supported with PLAIN|SCRAM-SHA-512|SCRAM-SHA-256", c.SaslMechanism)
+		return fmt.Errorf("not valid SASL mechanism '%v', only supported with PLAIN|SCRAM-SHA-512|SCRAM-SHA-256|AWS-IAM", c.SaslMechanism)
 	}
 	return nil
 }
