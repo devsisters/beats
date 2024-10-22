@@ -1,0 +1,16 @@
+name: Continuous Integration
+on: [push]
+
+jobs:
+  build-push:
+    runs-on: shared-2cpu-x64
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Build and Push Docker Image to pub-clone ECR
+      run: |
+        mage -v package
+      env:
+        PLATFORMS: linux/amd64,linux/arm64
+        PACKAGES: docker
