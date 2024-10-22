@@ -3,7 +3,7 @@ on: [push]
 
 jobs:
   build-push:
-    runs-on: shared-2cpu-x64
+    runs-on: shared-8cpu-x64
     steps:
     - uses: actions/checkout@v4
 
