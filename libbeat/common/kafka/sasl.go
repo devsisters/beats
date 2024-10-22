@@ -18,20 +18,33 @@
 package kafka
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/Shopify/sarama"
+	"github.com/aws/aws-msk-iam-sasl-signer-go/signer"
 )
 
 type SaslConfig struct {
 	SaslMechanism string `config:"mechanism"`
+	AWSRegion	  string `config:"region"`
 }
+
+type AWSIAMTokenProvider struct {
+	region string
+}
+
+func (m *AWSIAMTokenProvider) Token() (*sarama.AccessToken, error) {
+  token, _, err := signer.GenerateAuthToken(context.TODO(), m.region)
+  return &sarama.AccessToken{Token: token}, err}
+
 
 const (
 	saslTypePlaintext   = sarama.SASLTypePlaintext
 	saslTypeSCRAMSHA256 = sarama.SASLTypeSCRAMSHA256
 	saslTypeSCRAMSHA512 = sarama.SASLTypeSCRAMSHA512
+	saslTypesAWSIAM     = "AWS-IAM"
 )
 
 func (c *SaslConfig) ConfigureSarama(config *sarama.Config) {
@@ -53,6 +66,9 @@ func (c *SaslConfig) ConfigureSarama(config *sarama.Config) {
 		config.Net.SASL.SCRAMClientGeneratorFunc = func() sarama.SCRAMClient {
 			return &XDGSCRAMClient{HashGeneratorFcn: SHA512}
 		}
+	case saslTypesAWSIAM:
+		config.Net.SASL.Mechanism = sarama.SASLMechanism(sarama.SASLTypeOAuth)
+		config.Net.SASL.TokenProvider = &AWSIAMTokenProvider{region: c.AWSRegion}
 	default:
 		// This should never happen because `SaslMechanism` is checked on `Validate()`, keeping a panic to detect it earlier if it happens.
 		panic(fmt.Sprintf("not valid SASL mechanism '%v', only supported with PLAIN|SCRAM-SHA-512|SCRAM-SHA-256", c.SaslMechanism))

@@ -189,6 +189,7 @@ require (
 	github.com/Azure/go-autorest/autorest/adal v0.9.24
 	github.com/PaloAltoNetworks/pango v0.10.2
 	github.com/apache/arrow/go/v14 v14.0.2
+	github.com/aws/aws-msk-iam-sasl-signer-go v1.0.0
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.1
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.16.15
 	github.com/aws/aws-sdk-go-v2/service/cloudformation v1.50.0
