@@ -7,8 +7,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Build and Push Docker Image to pub-clone ECR
+    - name: Build
       run: |
+        cd filebeat
+        make mage
         mage -v package
       env:
         PLATFORMS: linux/amd64,linux/arm64
